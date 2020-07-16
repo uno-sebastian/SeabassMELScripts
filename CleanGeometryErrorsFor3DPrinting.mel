@@ -1,0 +1,59 @@
+proc string[] GetCurrentPolygons()
+{
+    string $selection[] = `ls -sl`;
+    if (`size($selection)` < 1)
+        return {};
+    return `filterExpand -sm 12 $selection`;
+}
+
+proc CleanGeometryErrorsFor3DPrinting()
+{
+    string $meshes[] = GetCurrentPolygons();
+    if (`size($meshes)` < 1)
+        return;
+    for($mesh in $meshes)
+    {
+        RebildMesh($mesh, 0.02);
+        CleanupPolygon($mesh, 1, 0.00005, 1, 0.00005, 0, 0.00005);
+        RestFaceNormals($mesh);
+        DeleteMeshHistory($mesh);
+    }
+    select $meshes;
+}
+
+proc RebildMesh(string $mesh, float $distanceLength)
+{
+    int $vertCount[] = `polyEvaluate -v $mesh`;
+    select -r ($mesh + ".vtx[0:" + ($vertCount[0] - 1) + "]");
+    performDetachComponents;
+    polyMergeVertex  -d $distanceLength -am 1 -ch 1 $mesh;
+    polyCloseBorder -ch 1 $mesh;
+}
+
+proc RestFaceNormals(string $mesh)
+{
+    select $mesh;
+    UnlockNormals;
+    polyNormalPerVertex -ufn true;
+    polySoftEdge -a 30 -ch 1 $mesh;
+}
+
+// Program Files\Autodesk\MayaLT2020\scripts\others\polyCleanup.mel
+proc CleanupPolygon(string $mesh, int $zeroGeom, float $zeroGeomTol, int $zeroEdge, float $zeroEdgeTol, int $zeroMap, float $zeroMapTol)
+{
+    select $mesh;
+    polyCleanup(0, 1, 1, 0, 1, 0, 1, 1, $zeroGeom, $zeroGeomTol, $zeroEdge, $zeroEdgeTol, $zeroMap, $zeroMapTol); 
+}
+
+proc DeleteMeshHistory(string $mesh)
+{
+    select $mesh;
+    DeleteHistory;
+    delete -ch;
+}
+
+CleanGeometryErrorsFor3DPrinting();
+
+
+
+
